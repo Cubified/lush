@@ -26,7 +26,7 @@ char *tok(char *inp);
 int check_builtins(char *cmd, int check_only, char *full);
 int determine_color(char *start, char *current, char *next, char *prev);
 
-void onion_skin(char *current, char *next, int ind);
+void onion_skin(char *full, char *current, char *next, int ind, int do_append);
 void syntax(char *inp, int is_final);
 
 #endif

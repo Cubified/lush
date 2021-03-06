@@ -114,6 +114,10 @@ char *ledit(char *prompt, int prompt_len){
               if(cur < strlen(out)){
                 cur++;
                 set_cursor();
+              } else {
+                redraw(-1);
+                cur = strlen(out);
+                redraw(0);
               }
               break;
             case 'D': /* Left arrow */
@@ -165,6 +169,12 @@ char *ledit(char *prompt, int prompt_len){
         nread = 0;
         cur = strlen(out);
         set_cursor();
+        break;
+      case 0x09: /* Tab */
+        nread = 0;
+        redraw(-1);
+        cur = strlen(out);
+        redraw(0);
         break;
       default:
         buf[nread] = '\0';

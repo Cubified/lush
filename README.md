@@ -11,6 +11,7 @@ A shell.  Written as a toy demo for my terminal line editor [`ledit`](https://gi
 - Syntax highlighting (a la `fish` or `oh-my-zsh`)
 - Command and filename onion skin/ghosting (a la `fish`)
 - Functional line editor (arrow keys, Control+arrow keys for moving between words, home/end keys, backspace/delete)
+- Case-insensitive tab completion
 - Aliases (see [`config.h`](https://github.com/Cubified/lush/blob/main/config.h))
 - Command history
 - <500 lines of pure `-pedantic` C
@@ -30,4 +31,3 @@ My focus with this project has been less on creating the guts of a robust shell,
 
 - Fix history occasionally jumping between entries
 - Environment variables
-- Tab completion

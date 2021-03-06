@@ -116,7 +116,7 @@ int determine_color(char *start, char *current, char *next, char *prev){
   return ARG;
 }
 
-void onion_skin(char *current, char *next, int ind){
+void onion_skin(char *full, char *current, char *next, int ind, int do_append){
   if(*(next-1) != ' '){
     char cmd[255],
          usr[255],
@@ -130,11 +130,13 @@ void onion_skin(char *current, char *next, int ind){
            *path = strdup(path_s),
            *tok = strtok(path, ":");
       while((tok=strtok(NULL, ":")) != NULL){
-        sprintf(cmd, "find %s | fgrep \"%s/%s\"", tok, tok, usr);
+        sprintf(cmd, "find %s | fgrep -i \"%s/%s\"", tok, tok, usr);
         fd = popen(cmd, "r");
         if(fgets(buf, sizeof(buf), fd) != NULL){
           buf[strlen(buf)-1] = '\0';
-          printf("\x1b[38;5;8m%s", buf+strlen(tok)+strlen(usr)+1);
+          if(do_append == -1){
+            memcpy(full, buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1);
+          } else printf("\x1b[38;5;8m%s", buf+strlen(tok)+strlen(usr)+1);
           goto done;
         }
       }
@@ -142,11 +144,13 @@ done:;
       pclose(fd);
       free(path);
     } else {
-      sprintf(cmd, "find . | fgrep \"./%s\"", usr);
+      sprintf(cmd, "find . | fgrep -i \"./%s\"", usr);
       fd = popen(cmd, "r");
       if(fgets(buf, sizeof(buf), fd) != NULL){
         buf[strlen(buf)-1] = '\0';
-        printf("\x1b[38;5;8m%s", buf+strlen(usr)+2);
+        if(do_append == -1){
+          memcpy(full+strlen(full)-strlen(current), buf+2, strlen(buf)-2);
+        } else printf("\x1b[38;5;8m%s", buf+strlen(usr)+2);
       }
       pclose(fd);
     }
@@ -171,8 +175,8 @@ void syntax(char *inp, int is_final){
     oldtoken_c = strdup(oldtoken);
     printf("%.*s", (int)(strlen(oldtoken)-strlen(token)), oldtoken);
     if(color != CMD_VALID &&
-       !is_final){
-      onion_skin(oldtoken_c, token, token_ind);
+       is_final != 1){
+      onion_skin(inp, oldtoken_c, token, token_ind, is_final);
     }
     free(oldtoken_c);
     token_ind++;
