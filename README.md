@@ -14,6 +14,7 @@ A shell.  Written as a toy demo for my terminal line editor [`ledit`](https://gi
 - Functional line editor (arrow keys, Control+arrow keys for moving between words, home/end keys, backspace/delete)
 - Aliases (see [`config.h`](https://github.com/Cubified/lush/blob/main/config.h))
 - Command history
+- ~8x faster than `fish` (see [benchmarks](https://github.com/Cubified/lush/blob/main/bench/results))
 - <500 lines of pure `-pedantic` C
 
 In its current state, `lush` works so long as you don't try to break it.  Not recommended for use as a daily driver, but still fun and satisfying to use.
@@ -36,3 +37,5 @@ My focus with this project has been less on creating the guts of a robust shell,
 - Fix aliases not expanding if given arguments
 - Multi-line editing
 - Onion skin based on history
+- Fix reading from pipe
+- More robust alias support

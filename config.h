@@ -32,6 +32,20 @@ enum text_colors {
 };
 
 /*
+ * PROMPT
+ *
+ * Note: PS1_len should contain the length
+ * of the string _without escape sequences_
+ */
+void gen_ps1(char *arg){
+  char hostname[255], cwd[255];
+  chdir(arg);
+  gethostname(hostname, 255);
+  getcwd(cwd, 255);
+  PS1_len = sprintf(PS1, "\x1b[33m%s\x1b[0m@\x1b[35m%s\x1b[0m:\x1b[34m%s\x1b[0m$ ", getlogin(), hostname, cwd)-27;
+}
+
+/*
  * ALIASES AND BUILTINS
  */
 char *aliases[] = {
@@ -45,8 +59,8 @@ char *builtins[] = {
   NULL
 };
 
-int (*builtins_func[])(char*) = {
-  exit,
+void (*builtins_func[])(char*) = {
+  cleanup,
   gen_ps1,
   NULL
 };

@@ -190,11 +190,15 @@ char *ledit(char *prompt, int prompt_len){
     }
   }
 
+  if(!isatty(STDIN_FILENO)){ /* Null terminator read -- most likely a pipe */
+    exit(0);
+  }
+
 shutdown:;
   redraw(1);
   history[history_ind++] = strdup(out);
   if(history_ind == history_len){
-    history_len++;
+    history_len *= 2;
     history = realloc(history, sizeof(char*)*history_len);
   }
   printf("\x1b[0m\n");

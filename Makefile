@@ -3,7 +3,7 @@ all: lush
 CC=gcc
 
 LIBS=
-CFLAGS=-O3 -pipe -s -pedantic -Wno-stringop-overflow -Wno-incompatible-pointer-types
+CFLAGS=-O3 -pipe -s -pedantic -Wno-stringop-overflow
 DEBUGCFLAGS=-Og -pipe -g
 
 INPUT=lush.c

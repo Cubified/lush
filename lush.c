@@ -2,13 +2,11 @@
  * lush.c: a shell
  */
 
-#include <signal.h>
-
 #define LEDIT_HIGHLIGHT syntax
 #include "ledit.h"
-
 #include "config.h"
 
+/* Pseudo-closure C idiom */
 #define EXEC_ONIONSKIN() \
   do { \
     sprintf(cmd, ONIONSKIN_CMD, tok, usr); \
@@ -31,18 +29,6 @@ void sighandler(int sig){
   memset(out, '\0', LEDIT_MAXLEN);
   printf("\n%s", PS1);
   fflush(stdout);
-}
-
-/*
- * Note: *outlen will contain the length
- * of the string _without escape sequences_
- */
-void gen_ps1(char *arg){
-  char hostname[255], cwd[255];
-  chdir(arg);
-  gethostname(hostname, 255);
-  getcwd(cwd, 255);
-  PS1_len = sprintf(PS1, "\x1b[33m%s\x1b[0m@\x1b[35m%s\x1b[0m:\x1b[34m%s\x1b[0m$ ", getlogin(), hostname, cwd)-27;
 }
 
 char *trim(char *inp, int direction){
@@ -188,20 +174,31 @@ void syntax(char *inp, int is_final){
   fflush(stdout);
 }
 
+void cleanup(char *arg){
+  int i;
+  for(i=0;i<history_ind;i++){
+    free(history[i]);
+  }
+  free(history);
+
+  exit(0);
+}
+
 int main(int argc, char **argv){
   if(argc > 1){
     printf(COLOR_HELPTEXT1 "lush: " COLOR_HELPTEXT2 "a shell\n" COLOR_HELPTEXT3 "Usage: " COLOR_HELPTEXT4 "%s" COLOR_RESET "\n", argv[0]);
     exit(0);
   }
 
-  gen_ps1(".");
-
   signal(SIGINT, sighandler);
 
-  while(running){
+  gen_ps1(".");
+
+  for(;;){
     ledit(PS1, PS1_len);
     if(!check_builtins(out, 0, out)) system(out); /* TODO: less lazy exec */
   }
 
+  /* Unreachable */
   return 0;
 }
