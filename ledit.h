@@ -48,7 +48,6 @@
     set_cursor(); \
   } while(0)
 
-struct termios tio, raw;
 char **history = NULL;
 int history_len = 1, /* Size of allocated array */
     history_ind = 0, /* Current entry in array */
@@ -61,6 +60,7 @@ char *ledit(char *prompt, int prompt_len){
        buf[LEDIT_MAXLEN];
   int cur = 0,
       nread;
+  struct termios tio, raw;
 
   /* Enter terminal raw mode */
   tcgetattr(STDIN_FILENO, &tio);
@@ -165,6 +165,8 @@ char *ledit(char *prompt, int prompt_len){
         cur = 0;
         set_cursor();
         break;
+      case 0x03: /* Ctrl+C (but only if sommething is wrong) */
+        goto shutdown;
       case 0x05: /* Ctrl+E (same as end key) */
         nread = 0;
         cur = strlen(out);

@@ -9,9 +9,9 @@ A shell.  Written as a toy demo for my terminal line editor [`ledit`](https://gi
 ### Features
 
 - Syntax highlighting (a la `fish` or `oh-my-zsh`)
-- Command and filename onion skin/ghosting (a la `fish`)
-- Functional line editor (arrow keys, Control+arrow keys for moving between words, home/end keys, backspace/delete)
+- Command and filename onion skin/ghosting (a la `fish` -- provides autofill suggestions based on programs in $PATH and files in current directory)
 - Case-insensitive tab completion
+- Functional line editor (arrow keys, Control+arrow keys for moving between words, home/end keys, backspace/delete)
 - Aliases (see [`config.h`](https://github.com/Cubified/lush/blob/main/config.h))
 - Command history
 - <500 lines of pure `-pedantic` C
@@ -30,4 +30,8 @@ My focus with this project has been less on creating the guts of a robust shell,
 ### To-Do
 
 - Fix history occasionally jumping between entries
-- Environment variables
+- Environment variables (+ runtime PS1 customization)
+- Fix escaping/quoted strings
+- Fix onion skin not applying to builtins/aliases
+- Fix aliases not expanding if given arguments
+- Multi-line editing

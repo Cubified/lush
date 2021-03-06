@@ -10,10 +10,8 @@
 #include "config.h"
 
 void sighandler(int sig){
-  /* TODO: If this were a more serious shell, this wouldn't be here */
-  printf("\x1b[0m\n");
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio);
-  exit(0);
+  printf("\n%s", PS1);
+  fflush(stdout);
 }
 
 /*
@@ -125,31 +123,34 @@ void onion_skin(char *full, char *current, char *next, int ind, int do_append){
     int tok_len = strlen(current)-strlen(next);
     strncpy(usr, current, tok_len);
     usr[tok_len] = '\0';
-    if(ind == 0){
+    if(ind == 0){ /* TODO: These two branches are just different enough to not reuse code */
       char *path_s = getenv("PATH"),
            *path = strdup(path_s),
            *tok = strtok(path, ":");
       while((tok=strtok(NULL, ":")) != NULL){
-        sprintf(cmd, "find %s | fgrep -i \"%s/%s\"", tok, tok, usr);
+        sprintf(cmd, "find %s -maxdepth 1 | fgrep -i \"%s/%s\"", tok, tok, usr);
         fd = popen(cmd, "r");
         if(fgets(buf, sizeof(buf), fd) != NULL){
           buf[strlen(buf)-1] = '\0';
           if(do_append == -1){
             memcpy(full, buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1);
+            strcat(full, " ");
           } else printf("\x1b[38;5;8m%s", buf+strlen(tok)+strlen(usr)+1);
-          goto done;
+          pclose(fd);
+          free(path);
+          return;
         }
+        pclose(fd);
       }
-done:;
-      pclose(fd);
       free(path);
     } else {
-      sprintf(cmd, "find . | fgrep -i \"./%s\"", usr);
+      sprintf(cmd, "find . -maxdepth 1 | fgrep -i \"./%s\"", usr);
       fd = popen(cmd, "r");
       if(fgets(buf, sizeof(buf), fd) != NULL){
         buf[strlen(buf)-1] = '\0';
         if(do_append == -1){
           memcpy(full+strlen(full)-strlen(current), buf+2, strlen(buf)-2);
+          strcat(full, " ");
         } else printf("\x1b[38;5;8m%s", buf+strlen(usr)+2);
       }
       pclose(fd);
