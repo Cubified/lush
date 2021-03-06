@@ -5,14 +5,6 @@
 #ifndef __LUSH_H
 #define __LUSH_H
 
-enum text_colors {
-  CMD_INVALID = 167,
-  CMD_VALID = 176,
-  STRING = 3,
-  PIPE = 165,
-  ARG = 74
-};
-
 char PS1[255];
 int running = 1,
     PS1_len;

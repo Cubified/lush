@@ -9,7 +9,26 @@
 
 #include "config.h"
 
+#define EXEC_ONIONSKIN() \
+  do { \
+    sprintf(cmd, ONIONSKIN_CMD, tok, usr); \
+    fd = popen(cmd, "r"); \
+    if(fgets(buf, sizeof(buf), fd) != NULL){ \
+      buf[strlen(buf)-1] = '\0'; \
+      if(do_append == -1){ \
+        memcpy(full+strlen(full)-strlen(current), buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1); \
+        strcat(full, " "); \
+      } else printf(COLOR_ONIONSKIN "%s", buf+strlen(tok)+strlen(usr)+1); \
+      pclose(fd); \
+      if(path != NULL) free(path); \
+      return; \
+    } \
+    pclose(fd); \
+  } while(0)
+
 void sighandler(int sig){
+  cur = 0;
+  memset(out, '\0', LEDIT_MAXLEN);
   printf("\n%s", PS1);
   fflush(stdout);
 }
@@ -27,13 +46,13 @@ void gen_ps1(char *arg){
 }
 
 char *trim(char *inp, int direction){
-  char *out = inp;
+  char *tout = inp;
 
-  while(*out == ' '){
-    out += direction;
+  while(*tout == ' '){
+    tout += direction;
   }
 
-  return out;
+  return tout;
 }
 
 /*
@@ -45,9 +64,9 @@ char *trim(char *inp, int direction){
  */
 char *tok(char *inp){
   int i, len = strlen(inp);
-  char *out = inp, quote = 0;
+  char *tout = inp, quote = 0;
   for(i=0;i<len;i++){
-    out = &inp[i];
+    tout = &inp[i];
     switch(inp[i]){
       case ' ':
       case '\0':
@@ -68,7 +87,7 @@ char *tok(char *inp){
     }
   }
 done:;
-  return out+1;
+  return tout+1;
 }
 
 int check_builtins(char *cmd, int check_only, char *full){
@@ -106,7 +125,7 @@ int determine_color(char *start, char *current, char *next, char *prev){
     strncpy(cmd, current, tok_len);
     cmd[tok_len] = '\0';
     if(check_builtins(cmd, 1, start)) return CMD_VALID;
-    sprintf(check, "which %s > /dev/null 2>&1", cmd); /* TODO: Maybe avoid using system() */
+    sprintf(check, VALIDTEST_CMD, cmd); /* TODO: Maybe avoid using system() */
     return (system(check) ? CMD_INVALID : CMD_VALID);
   }
   if(current[0] == '"' || current[0] == '\'') return STRING;
@@ -118,42 +137,26 @@ void onion_skin(char *full, char *current, char *next, int ind, int do_append){
   if(*(next-1) != ' '){
     char cmd[255],
          usr[255],
-         buf[255];
+         buf[255],
+         *path = NULL,
+         *tok;
     FILE *fd;
     int tok_len = strlen(current)-strlen(next);
     strncpy(usr, current, tok_len);
     usr[tok_len] = '\0';
-    if(ind == 0){ /* TODO: These two branches are just different enough to not reuse code */
-      char *path_s = getenv("PATH"),
-           *path = strdup(path_s),
-           *tok = strtok(path, ":");
+    if(ind == 0){
+      char *path_s = getenv("PATH");
+      path = strdup(path_s);
+      tok = strtok(path, ":");
       while((tok=strtok(NULL, ":")) != NULL){
-        sprintf(cmd, "find %s -maxdepth 1 | fgrep -i \"%s/%s\"", tok, tok, usr);
-        fd = popen(cmd, "r");
-        if(fgets(buf, sizeof(buf), fd) != NULL){
-          buf[strlen(buf)-1] = '\0';
-          if(do_append == -1){
-            memcpy(full, buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1);
-            strcat(full, " ");
-          } else printf("\x1b[38;5;8m%s", buf+strlen(tok)+strlen(usr)+1);
-          pclose(fd);
-          free(path);
-          return;
-        }
-        pclose(fd);
+        EXEC_ONIONSKIN();
       }
       free(path);
-    } else {
-      sprintf(cmd, "find . -maxdepth 1 | fgrep -i \"./%s\"", usr);
-      fd = popen(cmd, "r");
-      if(fgets(buf, sizeof(buf), fd) != NULL){
-        buf[strlen(buf)-1] = '\0';
-        if(do_append == -1){
-          memcpy(full+strlen(full)-strlen(current), buf+2, strlen(buf)-2);
-          strcat(full, " ");
-        } else printf("\x1b[38;5;8m%s", buf+strlen(usr)+2);
-      }
-      pclose(fd);
+    } else { /* TODO: If typing a filename from outside the folder, onion skin does not work */
+      tok = alloca(2);
+      tok[0] = '.';
+      tok[1] = '\0';
+      EXEC_ONIONSKIN();
     }
   }
 }
@@ -186,10 +189,8 @@ void syntax(char *inp, int is_final){
 }
 
 int main(int argc, char **argv){
-  char *out;
-
   if(argc > 1){
-    printf("\x1b[38;5;175mlush: \x1b[38;5;80ma shell\n\x1b[38;5;3mUsage: \x1b[38;5;75m%s\x1b[0m\n", argv[0]);
+    printf(COLOR_HELPTEXT1 "lush: " COLOR_HELPTEXT2 "a shell\n" COLOR_HELPTEXT3 "Usage: " COLOR_HELPTEXT4 "%s" COLOR_RESET "\n", argv[0]);
     exit(0);
   }
 
@@ -198,9 +199,8 @@ int main(int argc, char **argv){
   signal(SIGINT, sighandler);
 
   while(running){
-    out = ledit(PS1, PS1_len);
+    ledit(PS1, PS1_len);
     if(!check_builtins(out, 0, out)) system(out); /* TODO: less lazy exec */
-    free(out);
   }
 
   return 0;

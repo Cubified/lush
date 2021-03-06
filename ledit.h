@@ -39,8 +39,7 @@
     while((dir==1 ? pos < lim : pos > lim)){ \
       pos += dir; \
       if(out[pos] == ' ' || \
-         out[pos] == '_' || \
-         out[pos] == '-'){ \
+         out[pos] == '_'){  \
         break; \
       } \
     } \
@@ -48,18 +47,18 @@
     set_cursor(); \
   } while(0)
 
-char **history = NULL;
+char out[LEDIT_MAXLEN],
+     **history = NULL;
 int history_len = 1, /* Size of allocated array */
     history_ind = 0, /* Current entry in array */
-    history_pos = 0; /* Current entry while scrolling through history */
+    history_pos = 0, /* Current entry while scrolling through history */
+    cur = 0;
 
 void LEDIT_HIGHLIGHT();
 
 char *ledit(char *prompt, int prompt_len){
-  char *out = malloc(LEDIT_MAXLEN),
-       buf[LEDIT_MAXLEN];
-  int cur = 0,
-      nread;
+  char buf[LEDIT_MAXLEN];
+  int nread;
   struct termios tio, raw;
 
   /* Enter terminal raw mode */
@@ -75,6 +74,7 @@ char *ledit(char *prompt, int prompt_len){
   history_pos = history_len-1;
 
   /* Clear line, print prompt */
+  cur = 0;
   redraw(0);
   
   /* Main loop */

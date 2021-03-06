@@ -35,3 +35,4 @@ My focus with this project has been less on creating the guts of a robust shell,
 - Fix onion skin not applying to builtins/aliases
 - Fix aliases not expanding if given arguments
 - Multi-line editing
+- Onion skin based on history
