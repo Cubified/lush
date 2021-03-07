@@ -10,7 +10,11 @@
 /* 
  * SYNTAX HIGHLIGHTING/ONION SKIN
  */
-#define ONIONSKIN_CMD "find %s -iname '%s*' -maxdepth 1 -print -quit"
+#ifdef HAS_FZF
+#  define ONIONSKIN_CMD "find %s -maxdepth 1 2>/dev/null | fzf -i -f '%s'"
+#else
+#  define ONIONSKIN_CMD "find %s -iname '%s*' -maxdepth 1 -print -quit 2>/dev/null"
+#endif
 #define VALIDTEST_CMD "command -v %s > /dev/null 2>&1"
 
 /*
@@ -21,6 +25,7 @@
 #define COLOR_HELPTEXT2 "\x1b[38;5;80m"
 #define COLOR_HELPTEXT3 "\x1b[38;5;3m"
 #define COLOR_HELPTEXT4 "\x1b[38;5;75m"
+#define COLOR_ERROR     "\x1b[38;5;9m"
 #define COLOR_RESET     "\x1b[0m"
 
 enum text_colors {
@@ -38,8 +43,16 @@ enum text_colors {
  * of the string _without escape sequences_
  */
 void gen_ps1(char *arg){
-  char hostname[255], cwd[255];
-  chdir(arg);
+  int i = 0;
+  char hostname[255], cwd[255], arg_trim[255];
+
+  while(arg[i] != ' ' && arg[i++] != '\0');
+  strncpy(arg_trim, arg, i);
+  if(chdir(arg_trim) < 0){
+    printf(COLOR_ERROR "lush: Invalid cd command" COLOR_RESET "\n");
+    return;
+  }
+
   gethostname(hostname, 255);
   getcwd(cwd, 255);
   PS1_len = sprintf(PS1, "\x1b[33m%s\x1b[0m@\x1b[35m%s\x1b[0m:\x1b[34m%s\x1b[0m$ ", getlogin(), hostname, cwd)-27;

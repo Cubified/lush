@@ -14,7 +14,7 @@ int running = 1,
 void sighandler(int sig);
 void cleanup(char *arg);
 
-char *trim(char *inp, int direction);
+char *trim(char *inp);
 char *tok(char *inp);
 
 int check_builtins(char *cmd, int check_only, char *full);

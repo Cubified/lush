@@ -11,6 +11,7 @@ A shell.  Written as a toy demo for my terminal line editor [`ledit`](https://gi
 - Syntax highlighting (a la `fish` or `oh-my-zsh`)
 - Command and filename onion skin/ghosting (a la `fish` -- provides autofill suggestions based on programs in $PATH and files in current directory)
 - Case-insensitive tab completion
+  - Optionally, install [fzf](https://github.com/junegunn/fzf) for fuzzy file finding support.
 - Functional line editor (arrow keys, Control+arrow keys for moving between words, home/end keys, backspace/delete)
 - Aliases (see [`config.h`](https://github.com/Cubified/lush/blob/main/config.h))
 - Command history

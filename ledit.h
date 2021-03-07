@@ -39,7 +39,9 @@
     while((dir==1 ? pos < lim : pos > lim)){ \
       pos += dir; \
       if(out[pos] == ' ' || \
-         out[pos] == '_'){  \
+         out[pos] == '_' || \
+         out[pos] == '(' || \
+         out[pos] == ')'){  \
         break; \
       } \
     } \

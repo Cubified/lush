@@ -6,6 +6,11 @@
 #include "ledit.h"
 #include "config.h"
 
+#ifdef HAS_FZF
+#  define ONIONSKIN_PRINTF() printf(COLOR_ONIONSKIN "\x1b[%liD%s", strlen(usr), buf+strlen(tok)+1)
+#else
+#  define ONIONSKIN_PRINTF() printf(COLOR_ONIONSKIN "%s", buf+strlen(tok)+strlen(usr)+1)
+#endif
 /* Pseudo-closure C idiom */
 #define EXEC_ONIONSKIN() \
   do { \
@@ -16,7 +21,7 @@
       if(do_append == -1){ \
         memcpy(full+strlen(full)-strlen(current), buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1); \
         strcat(full, " "); \
-      } else printf(COLOR_ONIONSKIN "%s", buf+strlen(tok)+strlen(usr)+1); \
+      } else ONIONSKIN_PRINTF(); \
       pclose(fd); \
       if(path != NULL) free(path); \
       return; \
@@ -31,12 +36,10 @@ void sighandler(int sig){
   fflush(stdout);
 }
 
-char *trim(char *inp, int direction){
+char *trim(char *inp){
   char *tout = inp;
 
-  while(*tout == ' '){
-    tout += direction;
-  }
+  while(*tout++ == ' ');
 
   return tout;
 }
@@ -107,7 +110,8 @@ int determine_color(char *start, char *current, char *next, char *prev){
   char cmd[255], check[255];
   int tok_len = strlen(current)-strlen(next);
   if(start == current ||
-     prev[0] == '|'){
+     prev[0] == '|'   ||
+     prev[0] == '&'){
     strncpy(cmd, current, tok_len);
     cmd[tok_len] = '\0';
     if(check_builtins(cmd, 1, start)) return CMD_VALID;
@@ -159,7 +163,7 @@ void syntax(char *inp, int is_final){
     oldtoken = token;
     token = tok(token);
     if(token == oldtoken) break;
-    token = trim(token, 1);
+    token = trim(token);
     color = determine_color(inp, oldtoken, token, oldertoken);
     printf("\x1b[38;5;%im", color);
     oldtoken_c = strdup(oldtoken);
