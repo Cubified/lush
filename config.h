@@ -7,16 +7,6 @@
 
 #include "lush.h"
 
-/* 
- * SYNTAX HIGHLIGHTING/ONION SKIN
- */
-#ifdef HAS_FZF
-#  define ONIONSKIN_CMD "find %s -maxdepth 1 2>/dev/null | fzf -i -f '%s'"
-#else
-#  define ONIONSKIN_CMD "find %s -iname '%s*' -maxdepth 1 -print -quit 2>/dev/null"
-#endif
-#define VALIDTEST_CMD "command -v %s > /dev/null 2>&1"
-
 /*
  * COLORS
  */
@@ -49,7 +39,7 @@ void gen_ps1(char *arg){
   while(arg[i] != ' ' && arg[i++] != '\0');
   strncpy(arg_trim, arg, i);
   if(chdir(arg_trim) < 0){
-    printf(COLOR_ERROR "lush: Invalid cd command" COLOR_RESET "\n");
+    printf("\x1b[38;5;%imlush: Could not change directory to \x1b[38;5;%im%s." COLOR_RESET "\n", CMD_INVALID, STRING, arg_trim);
     return;
   }
 
@@ -59,23 +49,44 @@ void gen_ps1(char *arg){
 }
 
 /*
- * ALIASES AND BUILTINS
+ * HISTORY FILE
  */
-char *aliases[] = {
-  "ls", "ls -alh --color",
-  NULL
+#define HISTFILE "/tmp/lush_history"
+
+/*
+ * ALIASES
+ */
+char *aliases_from[] = {
+  "ls"
 };
 
-char *builtins[] = {
+char *aliases_to[] = {
+  "ls -alh --color"
+};
+
+/* TODO: Determine this at compile time
+ * (may not be possible because of array weirdness)
+ */
+int aliases_len[] = {
+  2
+};
+
+/*
+ * BUILTINS
+ */
+char *builtins_from[] = {
   "exit",
-  "cd",
-  NULL
+  "cd"
 };
 
-void (*builtins_func[])(char*) = {
+void (*builtins_to[])(char*) = {
   cleanup,
-  gen_ps1,
-  NULL
+  gen_ps1
+};
+
+int builtins_len[] = {
+  4,
+  2
 };
 
 #endif

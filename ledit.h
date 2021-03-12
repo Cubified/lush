@@ -35,13 +35,15 @@
 #define move_word(dir) \
   do { \
     int pos = cur, \
-        lim = (dir==1 ? strlen(out) : 0); \
+        lim = (dir==1 ? out_len : 0); \
     while((dir==1 ? pos < lim : pos > lim)){ \
       pos += dir; \
       if(out[pos] == ' ' || \
          out[pos] == '_' || \
          out[pos] == '(' || \
-         out[pos] == ')'){  \
+         out[pos] == ')' || \
+         out[pos] == '/' || \
+         out[pos] == ','){  \
         break; \
       } \
     } \
@@ -54,6 +56,7 @@ char out[LEDIT_MAXLEN],
 int history_len = 1, /* Size of allocated array */
     history_ind = 0, /* Current entry in array */
     history_pos = 0, /* Current entry while scrolling through history */
+    out_len = 0,
     cur = 0;
 
 void LEDIT_HIGHLIGHT();
@@ -73,9 +76,11 @@ char *ledit(char *prompt, int prompt_len){
   memset(buf, '\0', LEDIT_MAXLEN);
 
   if(history == NULL) history = malloc(sizeof(char*)*history_len);
-  history_pos = history_len-1;
+  history_pos = history_ind;
 
   /* Clear line, print prompt */
+  out_len = 0;
+  nread = 0;
   cur = 0;
   redraw(0);
   
@@ -93,32 +98,34 @@ char *ledit(char *prompt, int prompt_len){
               if(history_pos > 0){
                 history_pos--;
                 strcpy(out, history[history_pos]);
-                cur = strlen(out);
-                redraw(0);
+                out_len = strlen(out);
+                cur = out_len;
+                redraw(1);
               }
               break;
             case 'B': /* Down arrow */
               if(history_pos+1 == history_ind){
+                history_pos++;
                 memset(out, '\0', LEDIT_MAXLEN);
                 cur = 0;
-                redraw(0);
+                redraw(1);
                 break;
-              }
-
-              if(history_pos < history_len){
+              } else if(history_pos < history_ind){
                 history_pos++;
                 strcpy(out, history[history_pos]);
-                cur = strlen(out);
-                redraw(0);
+                out_len = strlen(out);
+                cur = out_len;
+                redraw(1);
               }
               break;
             case 'C': /* Right arrow */
-              if(cur < strlen(out)){
+              if(cur < out_len){
                 cur++;
                 set_cursor();
               } else {
                 redraw(-1);
-                cur = strlen(out);
+                out_len = strlen(out);
+                cur = out_len;
                 redraw(0);
               }
               break;
@@ -141,24 +148,26 @@ char *ledit(char *prompt, int prompt_len){
               }
               break;
             case '3': /* Delete */
-              if(cur < strlen(out)){
-                memmove(out+cur, out+cur+1, strlen(out)-cur);
+              if(cur < out_len){
+                memmove(out+cur, out+cur+1, out_len-cur);
+                out_len--;
                 redraw(0);
               }
               break;
             case '4': /* End */
-              cur = strlen(out);
+              cur = out_len;
               set_cursor();
               break;
           }
         }
         break;
       case 0x7f: /* Backspace */
-        if(strlen(out) > 0 &&
+        if(out_len > 0 &&
            cur > 0){
           nread = 0;
           cur--;
-          memmove(out+cur, out+cur+1, strlen(out)-cur);
+          memmove(out+cur, out+cur+1, out_len-cur);
+          out_len--;
           redraw(0);
         }
         break;
@@ -171,29 +180,27 @@ char *ledit(char *prompt, int prompt_len){
         goto shutdown;
       case 0x05: /* Ctrl+E (same as end key) */
         nread = 0;
-        cur = strlen(out);
+        cur = out_len;
         set_cursor();
         break;
       case 0x09: /* Tab */
         nread = 0;
         redraw(-1);
-        cur = strlen(out);
+        out_len = strlen(out);
+        cur = out_len;
         redraw(0);
         break;
       default:
         buf[nread] = '\0';
-        memmove(out+cur+nread, out+cur, strlen(out)-cur);
+        memmove(out+cur+nread, out+cur, out_len-cur);
         strncpy(out+cur, buf, nread);
+        out_len++;
 
         redraw(0);
 
         cur+=nread;
         break;
     }
-  }
-
-  if(!isatty(STDIN_FILENO)){ /* Null terminator read -- most likely a pipe */
-    exit(0);
   }
 
 shutdown:;

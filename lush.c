@@ -6,30 +6,7 @@
 #include "ledit.h"
 #include "config.h"
 
-#ifdef HAS_FZF
-#  define ONIONSKIN_PRINTF() printf(COLOR_ONIONSKIN "\x1b[%liD%s", strlen(usr), buf+strlen(tok)+1)
-#else
-#  define ONIONSKIN_PRINTF() printf(COLOR_ONIONSKIN "%s", buf+strlen(tok)+strlen(usr)+1)
-#endif
-/* Pseudo-closure C idiom */
-#define EXEC_ONIONSKIN() \
-  do { \
-    sprintf(cmd, ONIONSKIN_CMD, tok, usr); \
-    fd = popen(cmd, "r"); \
-    if(fgets(buf, sizeof(buf), fd) != NULL){ \
-      buf[strlen(buf)-1] = '\0'; \
-      if(do_append == -1){ \
-        memcpy(full+strlen(full)-strlen(current), buf+strlen(tok)+1, strlen(buf)-strlen(tok)-1); \
-        strcat(full, " "); \
-      } else ONIONSKIN_PRINTF(); \
-      pclose(fd); \
-      if(path != NULL) free(path); \
-      return; \
-    } \
-    pclose(fd); \
-  } while(0)
-
-void sighandler(int sig){
+void sighandler(){
   cur = 0;
   memset(out, '\0', LEDIT_MAXLEN);
   printf("\n%s", PS1);
@@ -39,7 +16,9 @@ void sighandler(int sig){
 char *trim(char *inp){
   char *tout = inp;
 
-  while(*tout++ == ' ');
+  while(*tout == ' '){
+    tout++;
+  }
 
   return tout;
 }
@@ -50,6 +29,10 @@ char *trim(char *inp){
  * In: String starting from where next token
  *       should be found
  * Out: End of found token
+ *
+ * TODO: Hindsight is 20/20 -- this approach is
+ * about a thousand times more cumbersome than
+ * just cloning the string and using strtok()
  */
 char *tok(char *inp){
   int i, len = strlen(inp);
@@ -80,26 +63,21 @@ done:;
 }
 
 int check_builtins(char *cmd, int check_only, char *full){
-  int i;
-  char buf[255];
+  long unsigned int i;
+  char buf[LUSH_BUFSIZE];
 
-  for(i=0;i<LENGTH(aliases);i+=2){
-    if(aliases[i] != NULL &&
-       aliases[i+1] != NULL &&
-       strcmp(cmd, aliases[i]) == 0){
-      if(!check_only){
-        sprintf(buf, "%s %s", aliases[i+1], full+strlen(cmd));
-        system(buf);
-      }
+  for(i=0;i<LENGTH(aliases_from);i++){
+    if(strncmp(cmd, aliases_from[i], aliases_len[i]) == 0 &&
+       cmd[aliases_len[i]] == ' '){
+      if(!check_only) sprintf(full, "%s %s", aliases_to[i], full+aliases_len[i]);
       return 1;
     }
   }
 
-  for(i=0;i<LENGTH(builtins);i++){
-    if(builtins[i] != NULL &&
-       strncmp(builtins[i], cmd, strlen(builtins[i])) == 0){
-      if(!check_only) builtins_func[i](cmd+3);
-      return 1;
+  for(i=0;i<LENGTH(builtins_from);i++){
+    if(strncmp(cmd, builtins_from[i], builtins_len[i]) == 0){
+      if(!check_only) builtins_to[i](full+builtins_len[i]+1);
+      return 2;
     }
   }
 
@@ -107,12 +85,12 @@ int check_builtins(char *cmd, int check_only, char *full){
 }
 
 int determine_color(char *start, char *current, char *next, char *prev){
-  char cmd[255], check[255];
+  char cmd[LUSH_BUFSIZE], check[LUSH_BUFSIZE];
   int tok_len = strlen(current)-strlen(next);
   if(start == current ||
      prev[0] == '|'   ||
      prev[0] == '&'){
-    strncpy(cmd, current, tok_len);
+    memcpy(cmd, current, tok_len);
     cmd[tok_len] = '\0';
     if(check_builtins(cmd, 1, start)) return CMD_VALID;
     sprintf(check, VALIDTEST_CMD, cmd); /* TODO: Maybe avoid using system() */
@@ -120,19 +98,19 @@ int determine_color(char *start, char *current, char *next, char *prev){
   }
   if(current[0] == '"' || current[0] == '\'') return STRING;
   if(current[0] == '|' || current[0] == '>') return PIPE;
-  return ARG;
+  return ARG; /* TODO: Test if argument is valid file */
 }
 
 void onion_skin(char *full, char *current, char *next, int ind, int do_append){
   if(*(next-1) != ' '){
-    char cmd[255],
-         usr[255],
-         buf[255],
+    char cmd[LUSH_BUFSIZE],
+         usr[LUSH_BUFSIZE],
+         buf[LUSH_BUFSIZE],
          *path = NULL,
          *tok;
     FILE *fd;
     int tok_len = strlen(current)-strlen(next);
-    strncpy(usr, current, tok_len);
+    memcpy(usr, current, tok_len);
     usr[tok_len] = '\0';
     if(ind == 0){
       char *path_s = getenv("PATH");
@@ -141,13 +119,13 @@ void onion_skin(char *full, char *current, char *next, int ind, int do_append){
       while((tok=strtok(NULL, ":")) != NULL){
         EXEC_ONIONSKIN();
       }
-      free(path);
     } else { /* TODO: If typing a filename from outside the folder, onion skin does not work */
-      tok = alloca(2);
+      tok = malloc(2);
       tok[0] = '.';
       tok[1] = '\0';
       EXEC_ONIONSKIN();
     }
+    free(path);
   }
 }
 
@@ -178,12 +156,47 @@ void syntax(char *inp, int is_final){
   fflush(stdout);
 }
 
-void cleanup(char *arg){
+void parse_histfile(){
+  char buf[LUSH_BUFSIZE];
+  FILE *fp = fopen(HISTFILE, "r");
+  if(fp == NULL) return;
+
+  history = malloc(sizeof(char*)*history_len);
+  while(fgets(buf, LEDIT_MAXLEN, fp) != NULL){
+    buf[strlen(buf)-1] = '\0';
+    history[history_ind++] = strdup(buf);
+    if(history_ind >= history_len){
+      history_len *= 2;
+      history = realloc(history, sizeof(char*)*history_len);
+    }
+  }
+
+  fclose(fp);
+}
+
+void transform_output(){
+  char cmd[LUSH_BUFSIZE],
+       *tokstart,
+       *token = out;
+
+  while(*token != '\0'){ /* TODO: If an alias is self-referential, this loops infinitely */
+    tokstart = token;
+    token = tok(token);
+    memcpy(cmd, tokstart, strlen(tokstart)-strlen(token));
+    if(check_builtins(cmd, 0, out) == 2) return;
+  }
+  system(out); /* TODO: Less lazy exec */
+}
+
+void cleanup(){
   int i;
+  FILE *fp = fopen(HISTFILE, "w");
   for(i=0;i<history_ind;i++){
+    fprintf(fp, "%s\n", history[i]); /* TODO: fprintf for a string and newline is very lazy */
     free(history[i]);
   }
   free(history);
+  fclose(fp);
 
   exit(0);
 }
@@ -194,13 +207,24 @@ int main(int argc, char **argv){
     exit(0);
   }
 
-  signal(SIGINT, sighandler);
+  signal(SIGINT,  sighandler);
+  signal(SIGQUIT, cleanup);
+  signal(SIGKILL, cleanup);
+  signal(SIGTERM, cleanup);
+
+  if(!isatty(STDIN_FILENO)){ /* Reading from pipe, just execute commands */
+    while(fgets(out, sizeof(out), stdin) != NULL){
+      system(out);
+    }
+    exit(0);
+  }
 
   gen_ps1(".");
+  parse_histfile();
 
   for(;;){
     ledit(PS1, PS1_len);
-    if(!check_builtins(out, 0, out)) system(out); /* TODO: less lazy exec */
+    transform_output();
   }
 
   /* Unreachable */
