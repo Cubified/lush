@@ -68,7 +68,8 @@ int check_builtins(char *cmd, int check_only, char *full){
 
   for(i=0;i<LENGTH(aliases_from);i++){
     if(strncmp(cmd, aliases_from[i], aliases_len[i]) == 0 &&
-       cmd[aliases_len[i]] == ' '){
+       (cmd[aliases_len[i]] == ' ' ||
+        cmd[aliases_len[i]] == '\0')){
       if(!check_only) sprintf(full, "%s %s", aliases_to[i], full+aliases_len[i]);
       return 1;
     }
@@ -119,10 +120,17 @@ void onion_skin(char *full, char *current, char *next, int ind, int do_append){
       while((tok=strtok(NULL, ":")) != NULL){
         EXEC_ONIONSKIN();
       }
-    } else { /* TODO: If typing a filename from outside the folder, onion skin does not work */
-      tok = malloc(2);
-      tok[0] = '.';
-      tok[1] = '\0';
+    } else {
+      tok = malloc(256);
+      path = strdup(usr);
+      if(realpath(usr, tok) == NULL){ /* File does not exist -- remove first part (partial filename), then retry */
+        realpath(dirname(path), tok);
+        free(path);
+        path = strdup(usr);
+        strcpy(usr, basename(path));
+      } else { /* File/dir does exist (probably dir), clear usr because it is not needed */
+        usr[0] = '\0';
+      }
       EXEC_ONIONSKIN();
     }
     free(path);

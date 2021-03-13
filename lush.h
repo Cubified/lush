@@ -6,6 +6,7 @@
 #define __LUSH_H
 
 #include <signal.h>
+#include <libgen.h>
 
 #ifdef HAS_FZF
 #  define ONIONSKIN_CMD "find %s -maxdepth 1 2>/dev/null | fzf -i -f '%s'"
