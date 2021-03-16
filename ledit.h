@@ -28,7 +28,7 @@
 #define redraw(is_final) \
   do { \
     printf("\x1b[0m\x1b[0G\x1b[2K%s", prompt); \
-    LEDIT_HIGHLIGHT(out, is_final); \
+    LEDIT_HIGHLIGHT(is_final); \
     printf("\x1b[%iG", prompt_len+cur+nread+1); \
     fflush(stdout); \
   } while(0)

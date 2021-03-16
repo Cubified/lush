@@ -62,7 +62,7 @@ done:;
   return tout+1;
 }
 
-int check_builtins(char *cmd, int check_only, char *full){
+int check_builtins(char *cmd, int check_only){
   long unsigned int i;
   char buf[LUSH_BUFSIZE];
 
@@ -70,14 +70,14 @@ int check_builtins(char *cmd, int check_only, char *full){
     if(strncmp(cmd, aliases_from[i], aliases_len[i]) == 0 &&
        (cmd[aliases_len[i]] == ' ' ||
         cmd[aliases_len[i]] == '\0')){
-      if(!check_only) sprintf(full, "%s %s", aliases_to[i], full+aliases_len[i]);
+      if(!check_only) sprintf(out, "%s %s", aliases_to[i], out+aliases_len[i]);
       return 1;
     }
   }
 
   for(i=0;i<LENGTH(builtins_from);i++){
     if(strncmp(cmd, builtins_from[i], builtins_len[i]) == 0){
-      if(!check_only) builtins_to[i](full+builtins_len[i]+1);
+      if(!check_only) builtins_to[i](out+builtins_len[i]+1);
       return 2;
     }
   }
@@ -85,15 +85,15 @@ int check_builtins(char *cmd, int check_only, char *full){
   return 0;
 }
 
-int determine_color(char *start, char *current, char *next, char *prev){
+int determine_color(char *current, char *next, char *prev){
   char cmd[LUSH_BUFSIZE], check[LUSH_BUFSIZE];
   int tok_len = strlen(current)-strlen(next);
-  if(start == current ||
+  if(current == out ||
      prev[0] == '|'   ||
      prev[0] == '&'){
     memcpy(cmd, current, tok_len);
     cmd[tok_len] = '\0';
-    if(check_builtins(cmd, 1, start)) return CMD_VALID;
+    if(check_builtins(cmd, 1)) return CMD_VALID;
     sprintf(check, VALIDTEST_CMD, cmd); /* TODO: Maybe avoid using system() */
     return (system(check) ? CMD_INVALID : CMD_VALID);
   }
@@ -102,45 +102,35 @@ int determine_color(char *start, char *current, char *next, char *prev){
   return ARG; /* TODO: Test if argument is valid file */
 }
 
-void onion_skin(char *full, char *current, char *next, int ind, int do_append){
+void onion_skin(char *current, char *next, int ind, int do_append){
   if(*(next-1) != ' '){
     char cmd[LUSH_BUFSIZE],
          usr[LUSH_BUFSIZE],
          buf[LUSH_BUFSIZE],
-         *path = NULL,
+         *path,
          *tok;
     FILE *fd;
     int tok_len = strlen(current)-strlen(next);
     memcpy(usr, current, tok_len);
     usr[tok_len] = '\0';
-    if(ind == 0){
-      char *path_s = getenv("PATH");
-      path = strdup(path_s);
-      tok = strtok(path, ":");
-      while((tok=strtok(NULL, ":")) != NULL){
-        EXEC_ONIONSKIN();
+
+    tok = alloca(LUSH_BUFSIZE); /* Alloca for fun and style points */
+    if(realpath(usr, tok) == NULL){
+      path = alloca(LUSH_BUFSIZE);
+      if(ind == 0 && !(usr[0] == '.' || usr[0] == '/')){
+        ONIONSKIN_PATHSEARCH();
+      } else {
+        ONIONSKIN_DIRSEARCH();
       }
-    } else {
-      tok = malloc(256);
-      path = strdup(usr);
-      if(realpath(usr, tok) == NULL){ /* File does not exist -- remove first part (partial filename), then retry */
-        realpath(dirname(path), tok);
-        free(path);
-        path = strdup(usr);
-        strcpy(usr, basename(path));
-      } else { /* File/dir does exist (probably dir), clear usr because it is not needed */
-        usr[0] = '\0';
-      }
-      EXEC_ONIONSKIN();
+      return;
     }
-    free(path);
   }
 }
 
-void syntax(char *inp, int is_final){
+void syntax(int is_final){
   int color,
       token_ind = 0;
-  char *token = inp,
+  char *token = out,
        *oldtoken = NULL,
        *oldtoken_c,
        *oldertoken;
@@ -150,13 +140,13 @@ void syntax(char *inp, int is_final){
     token = tok(token);
     if(token == oldtoken) break;
     token = trim(token);
-    color = determine_color(inp, oldtoken, token, oldertoken);
+    color = determine_color(oldtoken, token, oldertoken);
     printf("\x1b[38;5;%im", color);
     oldtoken_c = strdup(oldtoken);
     printf("%.*s", (int)(strlen(oldtoken)-strlen(token)), oldtoken);
     if(color != CMD_VALID &&
        is_final != 1){
-      onion_skin(inp, oldtoken_c, token, token_ind, is_final);
+      onion_skin(oldtoken_c, token, token_ind, is_final);
     }
     free(oldtoken_c);
     token_ind++;
@@ -187,11 +177,12 @@ void transform_output(){
        *tokstart,
        *token = out;
 
+  memset(cmd, '\0', LUSH_BUFSIZE);
   while(*token != '\0'){ /* TODO: If an alias is self-referential, this loops infinitely */
     tokstart = token;
     token = tok(token);
     memcpy(cmd, tokstart, strlen(tokstart)-strlen(token));
-    if(check_builtins(cmd, 0, out) == 2) return;
+    if(check_builtins(cmd, 0) == 2) return;
   }
   system(out); /* TODO: Less lazy exec */
 }
@@ -221,9 +212,7 @@ int main(int argc, char **argv){
   signal(SIGTERM, cleanup);
 
   if(!isatty(STDIN_FILENO)){ /* Reading from pipe, just execute commands */
-    while(fgets(out, sizeof(out), stdin) != NULL){
-      system(out);
-    }
+    while(fgets(out, sizeof(out), stdin) != NULL) system(out);
     exit(0);
   }
 

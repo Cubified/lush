@@ -46,3 +46,5 @@ Configuration of `lush` is done entirely at compile-time through the header file
 - Fix onion skin not applying to builtins/aliases
 - Multi-line editing
 - Onion skin based on history
+- Investigate and fix autocomplete occasionally not working
+- Remove printfs where they aren't strictly necessary
