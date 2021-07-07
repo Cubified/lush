@@ -16,7 +16,7 @@ A shell.  Written as a toy demo for my terminal line editor [`ledit`](https://gi
 - Aliases (see [`config.h`](https://github.com/Cubified/lush/blob/main/config.h))
 - Persistent command history (saved to disk)
 - ~8x faster than `fish`, and on par with `bash` and `zsh` speed-wise (see [benchmarks](https://github.com/Cubified/lush/blob/main/bench/results))
-- <500 lines of pure `-pedantic` C
+- 500 lines of pure `-pedantic` C
 
 In its current state, `lush` works so long as you don't try to break it.  Not recommended for use as a daily driver, but still fun and satisfying to use.
 
@@ -45,6 +45,5 @@ Configuration of `lush` is done entirely at compile-time through the header file
 - Fix escaping/quoted strings
 - Fix onion skin not applying to builtins/aliases
 - Multi-line editing
-- Onion skin based on history
 - Investigate and fix autocomplete occasionally not working
 - Remove printfs where they aren't strictly necessary

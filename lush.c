@@ -117,6 +117,7 @@ void onion_skin(char *current, char *next, int ind, int do_append){
     tok = alloca(LUSH_BUFSIZE); /* Alloca for fun and style points */
     if(realpath(usr, tok) == NULL){
       path = alloca(LUSH_BUFSIZE);
+      ONIONSKIN_HISTSEARCH();
       if(ind == 0 && !(usr[0] == '.' || usr[0] == '/')){
         ONIONSKIN_PATHSEARCH();
       } else {
